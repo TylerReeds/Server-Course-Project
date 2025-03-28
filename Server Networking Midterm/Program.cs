@@ -22,7 +22,7 @@ namespace Server_Networking_Midterm
         private static Socket UDPServer;
         private static IPEndPoint client1UDP = null;
         private static IPEndPoint client2UDP = null;
-        private static float[] positionData = new float[3]; 
+        private static float[] clientPosVeloData = new float[6]; 
 
         static void Main(string[] args)
         {
@@ -157,20 +157,20 @@ namespace Server_Networking_Midterm
                     //Checks that both UDP clients are not null
                     if (client1UDP != null && client2UDP != null)
                     {                      
-                        Buffer.BlockCopy(UDPBuffer, 0, positionData, 0, 12); 
+                        Buffer.BlockCopy(UDPBuffer, 0, clientPosVeloData, 0, 24); 
 
                         //Sends position data to the other client
                         if (senderEndPoint.Equals(client1UDP))
                         {
                             
                             UDPServer.SendTo(UDPBuffer, recPos, SocketFlags.None, client2UDP);
-                            Console.WriteLine("Position Received X:" + positionData[0] + " Y:" + positionData[1] + " Z:" + positionData[2] + " from " + client1UDP + " -> Sent To " + client2UDP);
+                            Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " Velocity Received X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client1UDP + " -> Sent To " + client2UDP);
                         }
                         else if (senderEndPoint.Equals(client2UDP))
                         {
                             
                             UDPServer.SendTo(UDPBuffer, recPos, SocketFlags.None, client1UDP);
-                            Console.WriteLine("Position Received X:" + positionData[0] + " Y:" + positionData[1] + " Z:" + positionData[2] + " from " + client2UDP + " -> Sent To " + client1UDP);
+                            Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " Velocity Received X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client2UDP + " -> Sent To " + client1UDP);
                         }
                     }
                 }
