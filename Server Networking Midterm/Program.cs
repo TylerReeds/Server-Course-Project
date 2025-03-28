@@ -164,13 +164,13 @@ namespace Server_Networking_Midterm
                         {
                             
                             UDPServer.SendTo(UDPBuffer, recPos, SocketFlags.None, client2UDP);
-                            Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " Velocity Received X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client1UDP + " -> Sent To " + client2UDP);
+                            Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " And Velocity X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client1UDP + " -> Sent To " + client2UDP);
                         }
                         else if (senderEndPoint.Equals(client2UDP))
                         {
                             
                             UDPServer.SendTo(UDPBuffer, recPos, SocketFlags.None, client1UDP);
-                            Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " Velocity Received X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client2UDP + " -> Sent To " + client1UDP);
+                            Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " And Velocity X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client2UDP + " -> Sent To " + client1UDP);
                         }
                     }
                 }
