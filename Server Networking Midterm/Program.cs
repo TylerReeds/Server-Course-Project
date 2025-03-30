@@ -22,7 +22,7 @@ namespace Server_Networking_Midterm
         private static Socket UDPServer;
         private static IPEndPoint client1UDP = null;
         private static IPEndPoint client2UDP = null;
-        private static float[] clientPosVeloData = new float[6]; 
+        private static float[] clientPosVeloData = new float[6];
 
         static void Main(string[] args)
         {
@@ -45,6 +45,7 @@ namespace Server_Networking_Midterm
 
             Thread UDPThread = new Thread(ReceiveUDPData);
             UDPThread.Start();
+            StartCoinSpawning();
             Console.ReadLine();
         }
 
@@ -92,7 +93,7 @@ namespace Server_Networking_Midterm
 
             //If message is quit notify other client that connection is closing
             if (message.ToLower() == "quit")
-            {              
+            {
                 if (socket == client1TCP && client2TCP != null)
                 {
                     byte[] sendBuffer = Encoding.ASCII.GetBytes("Client 1 has quit, Connection closing...");
@@ -150,25 +151,25 @@ namespace Server_Networking_Midterm
                     //Checks if either client is Null, if so it will look for reconnection 
                     if (client1UDP == null || client2UDP == null)
                     {
-                        ClientReconnect(senderEndPoint);  
-                        continue;  
+                        ClientReconnect(senderEndPoint);
+                        continue;
                     }
 
                     //Checks that both UDP clients are not null
                     if (client1UDP != null && client2UDP != null)
-                    {                      
-                        Buffer.BlockCopy(UDPBuffer, 0, clientPosVeloData, 0, 24); 
+                    {
+                        Buffer.BlockCopy(UDPBuffer, 0, clientPosVeloData, 0, 24);
 
                         //Sends position data to the other client
                         if (senderEndPoint.Equals(client1UDP))
                         {
-                            
+
                             UDPServer.SendTo(UDPBuffer, recPos, SocketFlags.None, client2UDP);
                             Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " And Velocity X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client1UDP + " -> Sent To " + client2UDP);
                         }
                         else if (senderEndPoint.Equals(client2UDP))
                         {
-                            
+
                             UDPServer.SendTo(UDPBuffer, recPos, SocketFlags.None, client1UDP);
                             Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " And Velocity X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client2UDP + " -> Sent To " + client1UDP);
                         }
@@ -209,17 +210,51 @@ namespace Server_Networking_Midterm
             {
                 Console.WriteLine("Client 1 TCP disconnected.");
                 client1TCP = null;
-                client1UDP = null; 
+                client1UDP = null;
             }
             else if (clientSocket == client2TCP)
             {
                 Console.WriteLine("Client 2 TCP disconnected.");
                 client2TCP = null;
-                client2UDP = null; 
+                client2UDP = null;
             }
 
             clientSocket.Close();
         }
-    }
 
+        private static ThreadLocal<Random> random = new ThreadLocal<Random>(() => new Random());
+
+        private static void StartCoinSpawning()
+        {
+            Thread coinThread = new Thread(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(5000); // Spawn a coin every 5 seconds
+
+                    float x = (float)(random.Value.NextDouble() * 10 - 5); // Random X position
+                    float y = 1.0f; // Fixed height
+                    float z = (float)(random.Value.NextDouble() * 10 - 5); // Random Z position
+
+                    byte[] coinData = Encoding.ASCII.GetBytes($"coin_spawn,{x},{y},{z}");
+
+                    // Send coin spawn message to both clients
+                    if (client1UDP != null)
+                    {
+                        UDPServer.SendTo(coinData, SocketFlags.None, client1UDP);
+                    }
+                    if (client2UDP != null)
+                    {
+                        UDPServer.SendTo(coinData, SocketFlags.None, client2UDP);
+                    }
+
+                    Console.WriteLine($"Spawned Coin at: X={x}, Y={y}, Z={z}");
+                }
+            });
+
+            coinThread.IsBackground = true;
+            coinThread.Start();
+        }
+
+    }
 }
