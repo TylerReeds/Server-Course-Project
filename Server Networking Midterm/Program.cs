@@ -233,7 +233,7 @@ namespace Server_Networking_Midterm
                     Thread.Sleep(5000); // Spawn a coin every 5 seconds
 
                     float x = (float)(random.Value.NextDouble() * 10 - 5); // Random X position
-                    float y = 1.0f; // Fixed height
+                    float y = 0.5f; // Fixed height
                     float z = (float)(random.Value.NextDouble() * 10 - 5); // Random Z position
 
                     byte[] coinData = Encoding.ASCII.GetBytes($"coin_spawn,{x},{y},{z}");
