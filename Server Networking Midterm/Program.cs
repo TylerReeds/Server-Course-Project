@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Net.Sockets;
 using System.Net;
+using System.IO;
 
 namespace Server_Networking_Midterm
 {
@@ -24,6 +25,19 @@ namespace Server_Networking_Midterm
         private static IPEndPoint client2UDP = null;
         private static float[] clientPosVeloData = new float[6];
 
+        //Client Names and Scores
+        private static float client1Score = 0;
+        private static float client2Score = 0;
+        private static string client1Name = "defaultclient1";
+        private static string client2Name = "defaultclient2";
+
+        //Filepath Stuff
+        private static string fileName = "Leaderboard.txt";
+        private static string filePath = Path.Combine(Environment.CurrentDirectory, fileName);
+
+        //Leaderboard stuff
+        private static string leaderboardString;
+
         static void Main(string[] args)
         {
             Console.WriteLine("Starting Server... ");
@@ -40,6 +54,11 @@ namespace Server_Networking_Midterm
             UDPServer.Bind(new IPEndPoint(IPAddress.Any, 8889));
             Console.WriteLine("UDP Server listening on port 8889...");
 
+            if (File.Exists(filePath))
+            {
+                string[] allLines = File.ReadAllLines(filePath);
+                leaderboardString = $"LeaderboardVals: {allLines[0]}\n{allLines[1]}\n{allLines[2]}\n{allLines[3]}\n{allLines[4]}";
+            }
 
             TCPServer.BeginAccept(new AsyncCallback(AcceptTCPCallback), null);
 
@@ -59,11 +78,15 @@ namespace Server_Networking_Midterm
             {
                 client1TCP = socket;
                 Console.WriteLine("Client 1 TCP connected: " + client1TCP.RemoteEndPoint);
+                byte[] leaderboardMSG = Encoding.ASCII.GetBytes(leaderboardString);
+                client1TCP.BeginSend(leaderboardMSG, 0, leaderboardMSG.Length, 0, new AsyncCallback(SendCallback), client1TCP);
             }
             else if (client2TCP == null)
             {
                 client2TCP = socket;
                 Console.WriteLine("Client 2 TCP connected: " + client2TCP.RemoteEndPoint);
+                byte[] leaderboardMSG = Encoding.ASCII.GetBytes(leaderboardString);
+                client2TCP.BeginSend(leaderboardMSG, 0, leaderboardMSG.Length, 0, new AsyncCallback(SendCallback), client2TCP);
             }
             else
             {
@@ -115,15 +138,48 @@ namespace Server_Networking_Midterm
             //Sending message to other client 
             if (socket == client1TCP && client2TCP != null)
             {
-                byte[] sendBuffer = Encoding.ASCII.GetBytes(message);
-                client2TCP.BeginSend(sendBuffer, 0, sendBuffer.Length, 0, new AsyncCallback(SendCallback), client2TCP);
-                Console.WriteLine("Received Message '" + message + "'" + " from " + client1TCP.RemoteEndPoint + " -> Sent to " + client2TCP.RemoteEndPoint);
+                if (message.Contains("Name:"))
+                {
+                    Console.WriteLine($"Client 1 {message}");
+                    string[] s = message.Split(' ');
+                    client1Name = s[1];
+                    Console.WriteLine($"the client 1 name is: {client1Name}");
+                }
+                else if (message.Contains("Score:"))
+                {
+                    Console.WriteLine($"Client 1 {message}");
+                    string[] s = message.Split(' ');
+                    client1Score = float.Parse(s[1]);                    
+                }
+                else
+                {
+                    byte[] sendBuffer = Encoding.ASCII.GetBytes(message);
+                    client2TCP.BeginSend(sendBuffer, 0, sendBuffer.Length, 0, new AsyncCallback(SendCallback), client2TCP);
+                    Console.WriteLine("Received Message '" + message + "'" + " from " + client1TCP.RemoteEndPoint + " -> Sent to " + client2TCP.RemoteEndPoint);
+                }
             }
             else if (socket == client2TCP && client1TCP != null)
             {
-                byte[] sendBuffer = Encoding.ASCII.GetBytes(message);
-                client1TCP.BeginSend(sendBuffer, 0, sendBuffer.Length, 0, new AsyncCallback(SendCallback), client1TCP);
-                Console.WriteLine("Received Message '" + message + "'" + " from " + client2TCP.RemoteEndPoint + " -> Sent to " + client1TCP.RemoteEndPoint);
+                if (message.Contains("Name:"))
+                {
+                    Console.WriteLine($"Client 2 {message}");
+                    string[] s = message.Split(' ');
+                    client2Name = s[1];
+
+                    Console.WriteLine($"the client 2 name is: {client2Name}");
+                }
+                else if (message.Contains("Score:"))
+                {
+                    Console.WriteLine($"Client 2 {message}");
+                    string[] s = message.Split(' ');
+                    client2Score = float.Parse(s[1]);
+                }
+                else
+                {
+                    byte[] sendBuffer = Encoding.ASCII.GetBytes(message);
+                    client1TCP.BeginSend(sendBuffer, 0, sendBuffer.Length, 0, new AsyncCallback(SendCallback), client1TCP);
+                    Console.WriteLine("Received Message '" + message + "'" + " from " + client2TCP.RemoteEndPoint + " -> Sent to " + client1TCP.RemoteEndPoint);
+                }
             }
 
             socket.BeginReceive(buffer, 0, buffer.Length, 0, new AsyncCallback(ReceiveTCPCallback), socket);
@@ -163,7 +219,6 @@ namespace Server_Networking_Midterm
                         //Sends position data to the other client
                         if (senderEndPoint.Equals(client1UDP))
                         {
-
                             UDPServer.SendTo(UDPBuffer, recPos, SocketFlags.None, client2UDP);
                             Console.WriteLine("Position Received X:" + clientPosVeloData[0] + " Y:" + clientPosVeloData[1] + " Z:" + clientPosVeloData[2] + " And Velocity X:" + clientPosVeloData[3] + " Y:" + clientPosVeloData[4] + " Z:" + clientPosVeloData[5] + " from " + client1UDP + " -> Sent To " + client2UDP);
                         }
@@ -211,12 +266,18 @@ namespace Server_Networking_Midterm
                 Console.WriteLine("Client 1 TCP disconnected.");
                 client1TCP = null;
                 client1UDP = null;
+
+                //save to file here
+                SaveLeaderboardData(client1Score, $"{client1Name}: {client1Score}");
             }
             else if (clientSocket == client2TCP)
             {
                 Console.WriteLine("Client 2 TCP disconnected.");
                 client2TCP = null;
                 client2UDP = null;
+
+                // save to file here
+                SaveLeaderboardData(client2Score, $"{client2Name}: {client2Score}");
             }
 
             clientSocket.Close();
@@ -256,5 +317,41 @@ namespace Server_Networking_Midterm
             coinThread.Start();
         }
 
+        private static void SaveLeaderboardData(float score, string lineToAdd)
+        {
+            if (File.Exists(filePath))
+            {
+                string[] allLines = File.ReadAllLines(filePath);
+                foreach (string line in allLines)
+                {
+                    string[] s = line.Split(' ');
+                    float scoreNum = float.Parse(s[1]);
+
+                    if (score > scoreNum)
+                    {
+                        for (int i = allLines.Length - 1; i > Array.IndexOf(allLines, line) + 1; i--)
+                        {
+                            try
+                            {
+                                allLines[i] = allLines[i - 1];
+                            }
+                            catch (IndexOutOfRangeException e)
+                            {
+                                Console.WriteLine("array is out of index");
+                            }
+                        }
+                        
+                        allLines[Array.IndexOf(allLines, line)] = lineToAdd;
+                        break;
+                    }
+                }
+
+                File.WriteAllLines(filePath, allLines);
+            }
+            else
+            {
+                Console.WriteLine("file does not exist");
+            }
+        }
     }
 }
